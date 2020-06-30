@@ -1,0 +1,17 @@
+{
+    "name": "xeloses/resty",
+    "type": "library",
+    "description": "Simple REST API client.",
+    "keywords": ["rest", "rest-client"],
+    "homepage": "https://github.com/Xeloses/resty",
+    "license": "MIT",
+    "authors": [
+        {"name": "Xeloses"}
+    ],
+    "require": {
+        "php": ">=7.1"
+    },
+    "autoload": {
+        "psr-0": { "Xeloses\\RESTy\\": "src/" }
+    }
+}
