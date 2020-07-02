@@ -112,8 +112,10 @@ class REST_Client{
 
         $this->base_url = $url;
 
+        $mime = $this->getContentType();
         $this->headers = [
-            'Content-Type' => $this->getContentType()
+            'Content-Type' => $mime,
+            'Accept'       => $mime
         ];
     }
 
