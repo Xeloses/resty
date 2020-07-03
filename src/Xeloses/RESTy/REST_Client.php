@@ -17,7 +17,6 @@ namespace Xeloses\RESTy;
  *
  * @package RESTy
  *
- * @method string        getContentType()
  * @method REST_Client   addHeader(string $name, string $value)
  * @method REST_Client   addHeaders(array $headers)
  * @method ?object|string get(string $endpoint, ?array $data, ?array $headers)
@@ -26,6 +25,7 @@ namespace Xeloses\RESTy;
  * @method ?object|string put(string $endpoint, ?array $data, ?array $headers)
  * @method ?object|string patch(string $endpoint, ?array $data, ?array $headers)
  * @method ?object|string delete(string $endpoint, ?array $headers)
+ * @method ?object|string customRequest(string $endpoint, string $method, ?array $data, ?array $headers)
  */
 class REST_Client{
     /**
@@ -120,23 +120,6 @@ class REST_Client{
     }
 
     /**
-     * Get expected content-type of REST API service response.
-     *
-     * @return string
-     */
-    public function getContentType()
-    {
-        switch($this->mode)
-        {
-            case self::MODE_JSON:
-                return 'application/json';
-            case self::MODE_XML:
-                return 'application/xml';
-        }
-        return null;
-    }
-
-    /**
      * Add HTTP header to all requests.
      *
      * @param string $name
@@ -184,50 +167,53 @@ class REST_Client{
      */
     public function get(string $endpoint, array $data = [], array $headers = [])
     {
-        if(!isset($endpoint) || empty($endpoint))
-        {
-            throw new \InvalidArgumentException('Endpoint URL required.');
-        }
-
-        $url = rtrim($this->base_url,'/').'/'.ltrim($endpoint,'/');
         if(!empty($data))
         {
-            $url .= ((strpos($url,'?') === false)?'?':'&').http_build_query($data);
+            $endpoint .= ((strpos($endpoint,'?') === false)?'?':'&').http_build_query($data);
         }
 
-        return $this->request($url,'GET',$headers);
+        return $this->request($endpoint,'GET',$headers);
     }
 
     /**
      * "POST" request.
      *
-     * @param string $endpoint
-     * @param array  $data
-     * @param array  $headers
+     * @param string        $endpoint
+     * @param string|array  $data      String will be sent as "plain/text" (if not defined in $headers), array - as "form" or "multipart" (if includes file links)
+     * @param array         $headers
      *
      * @return object|string|null
-     *
-     * @throws InvalidArgumentException
      */
-    public function post(string $endpoint, array $data = [], array $headers = [])
+    public function post(string $endpoint, mixed $data = [], array $headers = [])
     {
-        if(empty($endpoint))
+        if(is_array($data)){
+            $options = [
+                CURLOPT_POSTFIELDS => $this->processData($data)
+            ];
+
+            if(is_array($data))
+            {
+                $headers['Content-Length'] = strlen($data);
+                $headers['Content-Type'] = 'multipart/form-data';
+            }
+            else
+            {
+                $headers['Content-Type'] = 'application/x-www-form-urlencoded';
+            }
+        }
+        else
         {
-            throw new \InvalidArgumentException('Endpoint URL required.');
+            $options = [
+                CURLOPT_POSTFIELDS => $data
+            ]
+
+            if(!in_array('content-type',array_map(strtolower,array_keys($headers))))
+            {
+                $headers['Content-Type'] = 'text/plain';
+            }
         }
 
-        $options = [
-            CURLOPT_POSTFIELDS => $this->processData($data)
-        ];
-
-        $headers = [];
-        if(!is_array($data))
-        {
-            $headers['Content-Length'] = strlen($data);
-            $headers['Content-Type'] = 'multipart/form-data';
-        }
-
-        return $this->request($url,'POST',$headers,$options);
+        return $this->request($endpoint,'POST',$headers,$options);
     }
 
     /**
@@ -237,53 +223,55 @@ class REST_Client{
      * @param array  $headers
      *
      * @return object|string|null
-     *
-     * @throws InvalidArgumentException
      */
     public function head(string $endpoint, array $headers = [])
     {
-        if(empty($endpoint))
-        {
-            throw new \InvalidArgumentException('Endpoint URL required.');
-        }
-
         $options = [
             CURLOPT_NOBODY => true
         ];
 
-        return $this->request($url,'HEAD',$headers,$options);
+        return $this->request($endpoint,'HEAD',$headers,$options);
     }
 
     /**
      * "PUT" request.
      *
      * @param string $endpoint
-     * @param array  $data
+     * @param string|array  $data      String will be sent as "raw" (if not defined in $headers), array - as "form" or "multipart" (if includes file links)
      * @param array  $headers
      *
      * @return object|string|null
-     *
-     * @throws InvalidArgumentException
      */
-    public function put(string $endpoint, array $data = [], array $headers = [])
+    public function put(string $endpoint, mixed $data = [], array $headers = [])
     {
-        if(empty($endpoint))
+        if(is_array($data)){
+            $options = [
+                CURLOPT_POSTFIELDS => $this->processData($data)
+            ];
+
+            if(is_array($data))
+            {
+                $headers['Content-Length'] = strlen($data);
+                $headers['Content-Type'] = 'multipart/form-data';
+            }
+            else
+            {
+                $headers['Content-Type'] = 'application/x-www-form-urlencoded';
+            }
+        }
+        else
         {
-            throw new \InvalidArgumentException('Endpoint URL required.');
+            $options = [
+                CURLOPT_POSTFIELDS => $data
+            ]
+
+            if(!in_array('content-type',array_map(strtolower,array_keys($headers))))
+            {
+                $headers['Content-Type'] = 'text/plain';
+            }
         }
 
-        $options = [
-            CURLOPT_POSTFIELDS => $this->processData($data)
-        ];
-
-        $headers = [];
-        if(!is_array($data))
-        {
-            $headers['Content-Length'] = strlen($data);
-            $headers['Content-Type'] = 'multipart/form-data';
-        }
-
-        return $this->request($url,'PUT',$headers,$options);
+        return $this->request($endpoint,'PUT',$headers,$options);
     }
 
     /**
@@ -294,23 +282,17 @@ class REST_Client{
      * @param array  $headers
      *
      * @return object|string|null
-     *
-     * @throws InvalidArgumentException
      */
     public function patch(string $endpoint, array $data = [], array $headers = [])
     {
-        if(empty($endpoint))
-        {
-            throw new \InvalidArgumentException('Endpoint URL required.');
-        }
-
         $options = [
-            CURLOPT_POSTFIELDS => http_build_query($data)
+            CURLOPT_POSTFIELDS => http_build_query($data),
         ];
 
         $headers['Content-Length'] = strlen($data);
+        $headers['Content-Type'] = 'application/x-www-form-urlencoded';
 
-        return $this->request($url,'PATCH',$headers,$options);
+        return $this->request($endpoint,'PATCH',$headers,$options);
     }
 
     /**
@@ -320,40 +302,75 @@ class REST_Client{
      * @param array  $headers
      *
      * @return object|string|null
-     *
-     * @throws InvalidArgumentException
      */
     public function delete(string $endpoint, array $headers = [])
     {
-        if(empty($endpoint))
+        return $this->request($endpoint,'DELETE',$headers);
+    }
+
+    /**
+     * Custom request.
+     *
+     * @param string $endpoint
+     * @param string $method
+     * @param mixed  $data
+     * @param array  $headers
+     *
+     * @return string|null
+     *
+     * @throws InvalidArgumentException
+     */
+    public function customRequest(string $endpoint, string $method = '', mixed $data = null, array $headers = [])
+    {
+        if(empty($method))
         {
-            throw new \InvalidArgumentException('Endpoint URL required.');
+            throw new \InvalidArgumentException('Request method required.');
         }
 
-        return $this->request($url,'DELETE',$headers,$options);
+        $options = [];
+        if(!is_null($data) && !empty($data)){
+            $options = [
+                CURLOPT_POSTFIELDS => $data,
+            ];
+        }
+
+        return $this->request($endpoint,$method,$headers,$options);
     }
 
     /**
      * HTTP (cURL) request.
      *
-     * @param string $url
-     * @param string $method   "GET" or "POST"
+     * @internal
+     *
+     * @param string $endpoint
+     * @param string $method
      * @param array  $headers
      * @param array  $options  Additional cURL options
      *
      * @return object|string|null
      *
+     * @throws InvalidArgumentException
      * @throws RuntimeException
      */
-    private function request(string $url, string $method = 'GET', array $headers = [], array $options = [])
+    protected function request(string $endpoint, string $method = 'GET', array $headers = [], array $options = [])
     {
+        // Validate params: endpoint
+        if(!isset($endpoint) || empty($endpoint))
+        {
+            throw new \InvalidArgumentException('Endpoint URL required.');
+        }
+
+        // assemble request URL:
+        $url = rtrim($this->base_url,'/').'/'.ltrim($endpoint,'/');
+
+        // init cURL:
         $curl = curl_init($url);
         if($curl === false)
         {
             throw new \RuntimeException(curl_error($curl));
         }
 
-        //$options = array_merge($this->curl_options,$options);
+        // cURL options:
         foreach($this->curl_options as $option => $value)
         {
             if(!array_key_exists($option,$options))
@@ -362,8 +379,10 @@ class REST_Client{
             }
         }
 
+        // Headers:
         $options[CURLOPT_HTTPHEADER] = $this->processHeaders($headers);
 
+        // request method:
         $method = strtoupper($method);
         switch($method)
         {
@@ -379,6 +398,7 @@ class REST_Client{
 
         curl_setopt_array($curl,$options);
 
+        // send request:
         $response = curl_exec($curl);
         if($response === false)
         {
@@ -387,6 +407,7 @@ class REST_Client{
 
         curl_close($curl);
 
+        // process response:
         if($response && !empty(trim($response)))
         {
             switch($this->mode)
@@ -417,11 +438,13 @@ class REST_Client{
     /**
      * Converts assoc array of headers to cURL compatoble array.
      *
+     * @internal
+     *
      * @param array $headers
      *
      * @return array
      */
-    private function processHeaders(array $headers = [])
+    protected function processHeaders(array $headers = [])
     {
         $result = [];
 
@@ -436,13 +459,15 @@ class REST_Client{
     /**
      * Prepare data for use in POST/PUT requests.
      *
+     * @internal
+     *
      * @param array $data
      *
      * @return array|string
      */
     protected function processData(array $data = [])
     {
-        if($data)
+        if(count($data))
         {
             $multipart = false;
             foreach($data as $item)
@@ -464,5 +489,24 @@ class REST_Client{
         {
             return '';
         }
+    }
+
+    /**
+     * Get expected content-type of REST API service response.
+     *
+     * @internal
+     *
+     * @return string
+     */
+    protected function getContentType()
+    {
+        switch($this->mode)
+        {
+            case self::MODE_JSON:
+                return 'application/json';
+            case self::MODE_XML:
+                return 'application/xml';
+        }
+        return null;
     }
 }
