@@ -19,13 +19,14 @@ namespace Xeloses\RESTy;
  *
  * @method REST_Client   addHeader(string $name, string $value)
  * @method REST_Client   addHeaders(array $headers)
+ * @method REST_Client   ajax();
  * @method ?object|string get(string $endpoint, ?array $data, ?array $headers)
- * @method ?object|string post(string $endpoint, ?array $data, ?array $headers)
+ * @method ?object|string post(string $endpoint, ?array|string $data, ?array $headers)
  * @method ?object|string head(string $endpoint, ?array $headers)
- * @method ?object|string put(string $endpoint, ?array $data, ?array $headers)
+ * @method ?object|string put(string $endpoint, ?array|string $data, ?array $headers)
  * @method ?object|string patch(string $endpoint, ?array $data, ?array $headers)
  * @method ?object|string delete(string $endpoint, ?array $headers)
- * @method ?object|string customRequest(string $endpoint, string $method, ?array $data, ?array $headers)
+ * @method ?object|string customRequest(string $endpoint, string $method, ?mixed $data, ?array $headers)
  */
 class REST_Client{
     /**
@@ -82,7 +83,7 @@ class REST_Client{
     {
         if(!function_exists('curl_init'))
         {
-            throw new \Exception('CURL module required. See https://www.php.net/manual/book.curl.php for more info and installation instructions.');
+            throw new \Exception('CURL module required. See https://www.php.net/manual/curl.setup.php for more info and installation instructions.');
         }
 
         if(!$mode)
@@ -95,7 +96,7 @@ class REST_Client{
                 throw new \InvalidArgumentException('Unsupported mode.');
             }
             if($mode == self::MODE_XML && !function_exists('simplexml_load_string')){
-                throw new \Exception('SimpleXML module required. See https://www.php.net/manual/book.simplexml.php for more info and installation instructions.');
+                throw new \Exception('SimpleXML module required. See https://www.php.net/manual/simplexml.setup.php for more info and installation instructions.');
             }
         }
 
@@ -105,7 +106,8 @@ class REST_Client{
         {
             throw new \InvalidArgumentException('REST service URL required.');
         }
-        elseif(!preg_match('/^http[s]?:\/\/[\w\-]+.[a-z]{2,10}\/[\S]+$/i',$url))
+        //elseif(!preg_match('/^http[s]?:\/\/[\w\-]+.[a-z]{2,10}\/[\S]+$/i',$url))
+        elseif(!filter_var($url,FILTER_VALIDATE_URL,FILTER_FLAG_SCHEME_REQUIRED|FILTER_FLAG_HOST_REQUIRED) || stripos($url,'http') !== 0)
         {
             throw new \InvalidArgumentException('Invalid REST service URL.');
         }
@@ -155,6 +157,16 @@ class REST_Client{
     }
 
     /**
+     * Add "X-Requested-With" HTTP header to imitate AJAX request
+     *
+     * @return self
+     */
+    public function ajax()
+    {
+        return $this->addHeader('X-Requested-With','XMLHttpRequest');
+    }
+
+    /**
      * "GET" request.
      *
      * @param string $endpoint
@@ -184,16 +196,15 @@ class REST_Client{
      *
      * @return object|string|null
      */
-    public function post(string $endpoint, mixed $data = [], array $headers = [])
+    public function post(string $endpoint, $data = null, array $headers = [])
     {
         if(is_array($data)){
             $options = [
                 CURLOPT_POSTFIELDS => $this->processData($data)
             ];
 
-            if(is_array($data))
+            if(is_array($options[CURLOPT_POSTFIELDS]))
             {
-                $headers['Content-Length'] = strlen($data);
                 $headers['Content-Type'] = 'multipart/form-data';
             }
             else
@@ -201,11 +212,11 @@ class REST_Client{
                 $headers['Content-Type'] = 'application/x-www-form-urlencoded';
             }
         }
-        else
+        elseif($data)
         {
             $options = [
                 CURLOPT_POSTFIELDS => $data
-            ]
+            ];
 
             if(!in_array('content-type',array_map(strtolower,array_keys($headers))))
             {
@@ -242,16 +253,15 @@ class REST_Client{
      *
      * @return object|string|null
      */
-    public function put(string $endpoint, mixed $data = [], array $headers = [])
+    public function put(string $endpoint, $data = null, array $headers = [])
     {
         if(is_array($data)){
             $options = [
                 CURLOPT_POSTFIELDS => $this->processData($data)
             ];
 
-            if(is_array($data))
+            if(is_array($options[CURLOPT_POSTFIELDS]))
             {
-                $headers['Content-Length'] = strlen($data);
                 $headers['Content-Type'] = 'multipart/form-data';
             }
             else
@@ -263,7 +273,7 @@ class REST_Client{
         {
             $options = [
                 CURLOPT_POSTFIELDS => $data
-            ]
+            ];
 
             if(!in_array('content-type',array_map(strtolower,array_keys($headers))))
             {
@@ -289,7 +299,6 @@ class REST_Client{
             CURLOPT_POSTFIELDS => http_build_query($data),
         ];
 
-        $headers['Content-Length'] = strlen($data);
         $headers['Content-Type'] = 'application/x-www-form-urlencoded';
 
         return $this->request($endpoint,'PATCH',$headers,$options);
@@ -320,19 +329,14 @@ class REST_Client{
      *
      * @throws InvalidArgumentException
      */
-    public function customRequest(string $endpoint, string $method = '', mixed $data = null, array $headers = [])
+    public function customRequest(string $endpoint, string $method = '', $data = null, array $headers = [])
     {
         if(empty($method))
         {
             throw new \InvalidArgumentException('Request method required.');
         }
 
-        $options = [];
-        if(!is_null($data) && !empty($data)){
-            $options = [
-                CURLOPT_POSTFIELDS => $data,
-            ];
-        }
+        $options = $data ? [CURLOPT_POSTFIELDS => $data] : [];
 
         return $this->request($endpoint,$method,$headers,$options);
     }
