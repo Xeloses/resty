@@ -5,7 +5,7 @@
  *
  * @author     Xeloses (https://github.com/Xeloses)
  * @package    RESTy (https://github.com/Xeloses/resty)
- * @version    1.0
+ * @version    1.1
  * @copyright  Xeloses 2019
  * @license    MIT (http://en.wikipedia.org/wiki/MIT_License)
  */

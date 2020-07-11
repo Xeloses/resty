@@ -9,9 +9,11 @@
         {"name": "Xeloses"}
     ],
     "require": {
-        "php": ">=7.1"
+        "php": "^7.1"
     },
     "autoload": {
-        "psr-0": { "Xeloses\\RESTy\\": "src/" }
+        "psr-4": {
+            "Xeloses\\RESTy\\": "lib"
+        }
     }
 }
