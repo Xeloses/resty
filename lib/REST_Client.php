@@ -5,21 +5,24 @@
  *
  * @author     Xeloses (https://github.com/Xeloses)
  * @package    RESTy (https://github.com/Xeloses/resty)
- * @version    1.1
- * @copyright  Xeloses 2019
+ * @version    1.0.1
+ * @copyright  Xeloses 2019-2020
  * @license    MIT (http://en.wikipedia.org/wiki/MIT_License)
  */
 
 namespace Xeloses\RESTy;
+
+use Xeloses\RESTy\Exceptions\CurlException;
+use Xeloses\RESTy\Exceptions\MissingModuleException;
 
 /**
  * REST_Client class
  *
  * @package RESTy
  *
- * @method REST_Client   addHeader(string $name, string $value)
- * @method REST_Client   addHeaders(array $headers)
- * @method REST_Client   ajax();
+ * @method REST_Client    addHeader(string $name, string $value)
+ * @method REST_Client    addHeaders(array $headers)
+ * @method REST_Client    ajax();
  * @method ?object|string get(string $endpoint, ?array $data, ?array $headers)
  * @method ?object|string post(string $endpoint, ?array|string $data, ?array $headers)
  * @method ?object|string head(string $endpoint, ?array $headers)
@@ -76,14 +79,14 @@ class REST_Client{
      * @param string $url  Base REST service URL
      * @param int    $mode Responce content-type
      *
-     * @throws Exception                when cURL unavailable
+     * @throws MissingModuleException
      * @throws InvalidArgumentException
      */
     public function __construct(string $url, int $mode = self::MODE_JSON)
     {
         if(!function_exists('curl_init'))
         {
-            throw new \Exception('CURL module required. See https://www.php.net/manual/curl.setup.php for more info and installation instructions.');
+            throw new MissingModuleException('CURL module required. See https://www.php.net/manual/curl.setup.php for more info and installation instructions.');
         }
 
         if(!$mode)
@@ -96,7 +99,7 @@ class REST_Client{
                 throw new \InvalidArgumentException('Unsupported mode.');
             }
             if($mode == self::MODE_XML && !function_exists('simplexml_load_string')){
-                throw new \Exception('SimpleXML module required. See https://www.php.net/manual/simplexml.setup.php for more info and installation instructions.');
+                throw new MissingModuleException('SimpleXML module required. See https://www.php.net/manual/simplexml.setup.php for more info and installation instructions.');
             }
         }
 
@@ -107,7 +110,7 @@ class REST_Client{
             throw new \InvalidArgumentException('REST service URL required.');
         }
         //elseif(!preg_match('/^http[s]?:\/\/[\w\-]+.[a-z]{2,10}\/[\S]+$/i',$url))
-        elseif(!filter_var($url,FILTER_VALIDATE_URL,FILTER_FLAG_SCHEME_REQUIRED|FILTER_FLAG_HOST_REQUIRED) || stripos($url,'http') !== 0)
+        elseif(!filter_var($url,FILTER_VALIDATE_URL) || stripos($url,'http') !== 0)
         {
             throw new \InvalidArgumentException('Invalid REST service URL.');
         }
@@ -129,7 +132,7 @@ class REST_Client{
      *
      * @return self
      */
-    public function addHeader(string $name, string $value)
+    public function addHeader(string $name, string $value): self
     {
         if(!empty($name) && !empty($value))
         {
@@ -146,7 +149,7 @@ class REST_Client{
      *
      * @return self
      */
-    public function addHeaders(array $headers)
+    public function addHeaders(array $headers): self
     {
         foreach($headers as $name => $value)
         {
@@ -161,7 +164,7 @@ class REST_Client{
      *
      * @return self
      */
-    public function ajax()
+    public function ajax(): self
     {
         return $this->addHeader('X-Requested-With','XMLHttpRequest');
     }
@@ -174,8 +177,6 @@ class REST_Client{
      * @param array  $headers
      *
      * @return object|string|null
-     *
-     * @throws InvalidArgumentException
      */
     public function get(string $endpoint, array $data = [], array $headers = [])
     {
@@ -354,7 +355,7 @@ class REST_Client{
      * @return object|string|null
      *
      * @throws InvalidArgumentException
-     * @throws RuntimeException
+     * @throws CurlException
      */
     protected function request(string $endpoint, string $method = 'GET', array $headers = [], array $options = [])
     {
@@ -371,7 +372,7 @@ class REST_Client{
         $curl = curl_init($url);
         if($curl === false)
         {
-            throw new \RuntimeException(curl_error($curl));
+            throw new \CurlException(curl_error($curl));
         }
 
         // cURL options:
@@ -406,7 +407,7 @@ class REST_Client{
         $response = curl_exec($curl);
         if($response === false)
         {
-            throw new \RuntimeException(curl_error($curl));
+            throw new \CurlException(curl_error($curl));
         }
 
         curl_close($curl);

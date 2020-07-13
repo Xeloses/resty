@@ -41,8 +41,6 @@ Also additional headers can be added to single request in request sending method
 
 Methods `addHeader` and `addHeaders` are chainable.
 
-> *Note: you don't need to add "Content-Type" header, REST_Client do it itself.*
-
 ### Request
 Send request:
 ```php
@@ -62,6 +60,7 @@ $rest_client->head(string $endpoint, ?array $headers)
 $rest_client->put(string $endpoint, ?array $data, ?array $headers)
 $rest_client->patch(string $endpoint, ?array $data, ?array $headers)
 $rest_client->delete(string $endpoint, ?array $headers)
+$rest_client->customRequest(string $endpoint, string $method, ?mixed $data, ?array $headers)
 ```
 Parameters:
 * *string* **$endpoint** - REST API endpoint (without base URL).

@@ -1,7 +1,7 @@
 {
     "name": "xeloses/resty",
     "type": "library",
-    "description": "Simple REST API client.",
+    "description": "REST API client.",
     "keywords": ["rest", "rest-client"],
     "homepage": "https://github.com/Xeloses/resty",
     "license": "MIT",
