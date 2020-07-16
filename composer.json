@@ -4,7 +4,7 @@
     "description": "REST API client.",
     "keywords": ["rest", "rest-client"],
     "homepage": "https://github.com/Xeloses/resty",
-    "license": "MIT",
+    "license": "GPL-3.0",
     "authors": [
         {"name": "Xeloses"}
     ],
