@@ -19,5 +19,5 @@ namespace Xeloses\RESTy\Exceptions;
  * @subpackage Exceptions
  */
 
-class MissingModuleException extends Exception{}
+class MissingModuleException extends \Exception{}
 ?>

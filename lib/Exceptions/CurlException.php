@@ -19,5 +19,5 @@ namespace Xeloses\RESTy\Exceptions;
  * @subpackage Exceptions
  */
 
-class CurlException extends Exception{}
+class CurlException extends \Exception{}
 ?>
