@@ -7,7 +7,7 @@
  * @package    RESTy (https://github.com/Xeloses/resty)
  * @version    1.0.1
  * @copyright  Xeloses 2019-2020
- * @license    MIT (http://en.wikipedia.org/wiki/MIT_License)
+ * @license    GNU GPL v3 (https://www.gnu.org/licenses/gpl-3.0.html)
  */
 
 namespace Xeloses\RESTy;
